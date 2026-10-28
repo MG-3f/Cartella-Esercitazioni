@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="4.2">
+    <attributes>
+        <attribute name="name" value="Swap"/>
+        <attribute name="authors" value="studente"/>
+        <attribute name="about" value=""/>
+        <attribute name="saved" value="2026-09-21 12:21:30 "/>
+        <attribute name="created" value="c3R1ZGVudGU7MjAxUEMxMzsyMDI2LTA5LTIxOyIxMjowODoyMSAiOzI0NjE="/>
+        <attribute name="edited" value="c3R1ZGVudGU7MjAxUEMxMzsyMDI2LTA5LTIxOyIxMjoyMTozMCAiOzE7MjU2NA=="/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="x" type="Integer" array="False" size=""/>
+            <declare name="y" type="Integer" array="False" size=""/>
+            <output expression="&quot;Inserisci x e y&quot;" newline="True"/>
+            <input variable="x"/>
+            <input variable="y"/>
+            <output expression="&quot;Prima:  x= &quot; &amp; x &amp; &quot;, y= &quot; &amp; y" newline="True"/>
+            <declare name="temp" type="Integer" array="False" size=""/>
+            <assign variable="temp" expression="x"/>
+            <assign variable="x" expression="y"/>
+            <assign variable="y" expression="temp"/>
+            <output expression="&quot;Dopo:  x= &quot; &amp; x &amp; &quot;, y= &quot; &amp; y" newline="True"/>
+        </body>
+    </function>
+</flowgorithm>

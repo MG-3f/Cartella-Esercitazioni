@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="4.2">
+    <attributes>
+        <attribute name="name" value="decimale-a-binario"/>
+        <attribute name="authors" value="studente"/>
+        <attribute name="about" value=""/>
+        <attribute name="saved" value="2026-10-19 11:32:05 "/>
+        <attribute name="created" value="c3R1ZGVudGU7MjAxUEMxMzsyMDI2LTEwLTE5OyIxMToyMzo0NSAiOzI0NjI="/>
+        <attribute name="edited" value="c3R1ZGVudGU7MjAxUEMxMzsyMDI2LTEwLTE5OyIxMTozMjowNSAiOzE7MjU2Ng=="/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="numero" type="Integer" array="False" size=""/>
+            <declare name="stringaris" type="String" array="False" size=""/>
+            <assign variable="stringaris" expression="&quot;&quot;"/>
+            <output expression="&quot;Dammi il valore del numero da convertire&quot;" newline="True"/>
+            <input variable="numero"/>
+            <while expression="numero &gt; 0">
+                <assign variable="stringaris" expression="(numero % 2) &amp; stringaris"/>
+                <assign variable="numero" expression="numero / 2"/>
+            </while>
+            <output expression="stringaris" newline="True"/>
+        </body>
+    </function>
+</flowgorithm>
