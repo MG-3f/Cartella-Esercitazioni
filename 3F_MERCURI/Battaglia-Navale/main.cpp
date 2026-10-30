@@ -7,7 +7,6 @@
 #include <cctype>
 #include <iomanip>
 
-// Prima includiamo le librerie di sistema Windows per evitare conflitti con 'byte'
 #ifdef _WIN32
 #include <windows.h>
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -15,11 +14,10 @@
 #endif
 #endif
 
-// Spostato qui dopo le inclusioni di sistema
 using namespace std;
 
 // ==========================================
-// CONFIGURAZIONE COLORI ANSI
+// CONFIGURAZIONE COLORI ANSI E STILE
 // ==========================================
 void abilitaAnsi() {
 #ifdef _WIN32
@@ -34,13 +32,20 @@ void pulisciSchermo() {
     cout << "\033[2J\033[1;1H";
 }
 
-const string COLORE_RESET = "\033[0m";
-const string COLORE_BLU   = "\033[34m"; // Acqua
-const string COLORE_ROSSO = "\033[31m"; // Colpo a segno
-const string COLORE_BIANCO= "\033[37m"; // Mancato
-const string COLORE_VERDE = "\033[32m"; // Nave
-const string COLORE_GIALLO= "\033[33m"; // Evidenziato / Info
-const string COLORE_CIANO = "\033[36m"; // Intestazioni
+const string COLORE_RESET   = "\033[0m";
+const string COLORE_GRIGIO  = "\033[90m";
+const string COLORE_BLU     = "\033[34m"; // Acqua mare
+const string COLORE_ROSSO   = "\033[31m"; // Colpo a segno / Nemico
+const string COLORE_BIANCO  = "\033[37m"; // Mancato
+const string COLORE_VERDE   = "\033[32m"; // Nave / Vittoria
+const string COLORE_GIALLO  = "\033[33m"; // Intestazioni / Evidenziato
+const string COLORE_CIANO   = "\033[36m"; // Titoli e BORDURA
+const string COLORE_MAGENTA = "\033[35m"; // Statistiche
+
+void attendiInvio() {
+    cout << "\n" << COLORE_GRIGIO << "Premi INVIO per continuare..." << COLORE_RESET;
+    cin.get();
+}
 
 // ==========================================
 // STRUTTURE E ENUMS
@@ -87,7 +92,6 @@ public:
     string getNome() const { return nome_; }
     int getDimensione() const { return dimensione_; }
     TipoNave getTipo() const { return tipo_; }
-    bool eOrizzontale() const { return orizzontale_; }
     const vector<Coordinata>& getCoordinate() const { return coordinate_; }
     bool ePosizionata() const { return posIniziale_.x != -1 && posIniziale_.y != -1; }
 };
@@ -122,25 +126,6 @@ public:
             int x = orizzontale ? inizio.x + i : inizio.x;
             int y = orizzontale ? inizio.y : inizio.y + i;
             if (griglia_[y][x] == StatoCella::NAVE) return false;
-        }
-        return true;
-    }
-
-    bool posizionaNave(size_t indiceNave, Coordinata inizio, bool orizzontale) {
-        if (indiceNave >= navi_.size()) return false;
-        
-        Nave& nave = navi_[indiceNave];
-        if (!puoPosizionare(nave, inizio, orizzontale)) return false;
-
-        if (nave.ePosizionata()) {
-            for (const auto& coord : nave.getCoordinate()) {
-                griglia_[coord.y][coord.x] = StatoCella::VUOTA;
-            }
-        }
-
-        nave.posiziona(inizio, orizzontale);
-        for (const auto& coord : nave.getCoordinate()) {
-            griglia_[coord.y][coord.x] = StatoCella::NAVE;
         }
         return true;
     }
@@ -203,7 +188,6 @@ public:
 
     StatoCella getStatoCella(int x, int y) const { return griglia_[y][x]; }
     vector<Nave>& getNavi() { return navi_; }
-    const vector<Nave>& getNavi() const { return navi_; }
     void aggiungiNave(Nave nave) { navi_.push_back(nave); }
 };
 
@@ -245,7 +229,7 @@ public:
 };
 
 // ==========================================
-// FUNZIONI DI INTERFACCIA COMPLEMENTARI
+// UTILITY DI INTERFACCIA E GRAFICA
 // ==========================================
 vector<Nave> creaFlottaStandard() {
     return {
@@ -257,13 +241,24 @@ vector<Nave> creaFlottaStandard() {
     };
 }
 
+void mostraBanner() {
+    cout << COLORE_CIANO;
+    cout << "====================================================\n";
+    cout << "  ____   _  _____ _____  _    ____ _     ___    _   \n";
+    cout << " | __ ) / \\|_   _|_   _|/ \\  / ___| |   |_ _|  / \\  \n";
+    cout << " |  _ \\/ _ \\ | |   | | / _ \\| |  _| |    | |  / _ \\ \n";
+    cout << " | |_) / ___ \\| |   | |/ ___ \\ |_| | |___ | | / ___ \\\n";
+    cout << " |____/_/   \\_\\_|   |_/_/   \\_\\____|_____|___/_/   \\_\\\n";
+    cout << "                 N A V A L E                        \n";
+    cout << "====================================================\n" << COLORE_RESET;
+}
+
 void mostraGriglia(const Griglia& griglia, bool nascondiNavi) {
-    cout << "   ";
-    for (int x = 0; x < 10; ++x) cout << " " << x << " ";
-    cout << "\n";
+    cout << "     0  1  2  3  4  5  6  7  8  9 \n";
+    cout << "   +------------------------------+\n";
 
     for (int y = 0; y < 10; ++y) {
-        cout << " " << (char)('A' + y) << " ";
+        cout << " " << (char)('A' + y) << " |";
         for (int x = 0; x < 10; ++x) {
             StatoCella stato = griglia.getStatoCella(x, y);
             if (stato == StatoCella::VUOTA) {
@@ -277,67 +272,124 @@ void mostraGriglia(const Griglia& griglia, bool nascondiNavi) {
                 cout << COLORE_BIANCO << " * " << COLORE_RESET;
             }
         }
-        cout << "\n";
+        cout << "|\n";
     }
+    cout << "   +------------------------------+\n";
 }
 
 bool inputCoordinata(Coordinata& coord) {
     string in;
-    cout << "Inserisci coordinata (es. A5 o a5): ";
+    cout << COLORE_GIALLO << "Inserisci coordinata (es. A5): " << COLORE_RESET;
     if (!(cin >> in)) return false;
-    if (in.length() < 2) return false;
     
-    char lett = toupper(in[0]);
-    char num = in[1];
+    char lett = ' ';
+    string numStr = "";
 
-    if (lett < 'A' || lett > 'J' || num < '0' || num > '9') return false;
-    
+    for (char c : in) {
+        if (isalpha(c) && lett == ' ') {
+            lett = toupper(c);
+        } else if (isdigit(c)) {
+            numStr += c;
+        }
+    }
+
+    if (lett < 'A' || lett > 'J' || numStr.empty()) return false;
+
+    int valNum = stoi(numStr);
+    if (valNum < 0 || valNum > 9) return false;
+
     coord.y = lett - 'A';
-    coord.x = num - '0';
+    coord.x = valNum;
     return true;
 }
 
-// ==========================================
-// MAIN LOOP DI GIOCO
-// ==========================================
-int main() {
-    abilitaAnsi();
-    srand(time(0));
+void mostraRegole() {
+    pulisciSchermo();
+    mostraBanner();
+    cout << COLORE_GIALLO << "\n--- REGOLE DI GIOCO ---\n" << COLORE_RESET;
+    cout << "1. Il tabellone e' una griglia 10x10 (righe A-J, colonne 0-9).\n";
+    cout << "2. Entrambi i giocatori possiedono 5 navi posizionate casualmente:\n";
+    cout << "   - Portaerei (5 caselle)\n";
+    cout << "   - Corazzata (4 caselle)\n";
+    cout << "   - Incrociatore (3 caselle)\n";
+    cout << "   - Sottomarino (3 caselle)\n";
+    cout << "   - Cacciatorpediniere (2 caselle)\n";
+    cout << "3. Legenda Simboli:\n";
+    cout << "   " << COLORE_BLU << "~" << COLORE_RESET << " : Acqua / Non esplorato\n";
+    cout << "   " << COLORE_VERDE << "O" << COLORE_RESET << " : La tua nave\n";
+    cout << "   " << COLORE_ROSSO << "X" << COLORE_RESET << " : Colpo a segno!\n";
+    cout << "   " << COLORE_BIANCO << "*" << COLORE_RESET << " : Acqua (Colpo mancato)\n";
+    cout << "4. Vince chi affonda per primo tutte le navi nemiche!\n";
+    attendiInvio();
+}
 
-    Giocatore umano("Giocatore");
-    Giocatore computer("Computer");
+void mostraStatistichePartita(const Giocatore& u, const Giocatore& c) {
+    pulisciSchermo();
+    mostraBanner();
+    cout << COLORE_MAGENTA << "\n--- STATISTICHE ULTIMA PARTITA ---\n" << COLORE_RESET;
+    
+    auto calcolaAccuratezza = [](int colpi, int messiA) {
+        if (colpi == 0) return 0.0;
+        return (double)messiA / colpi * 100.0;
+    };
 
-    // Inizializza le flotte
+    cout << "\n[ Tu ]\n";
+    cout << " - Colpi totali sparati : " << u.getColpiSparati() << "\n";
+    cout << " - Colpi a segno        : " << u.getColpiASegno() << "\n";
+    cout << " - Colpi mancati        : " << u.getMancati() << "\n";
+    cout << fixed << setprecision(1);
+    cout << " - Accuratezza          : " << calcolaAccuratezza(u.getColpiSparati(), u.getColpiASegno()) << "%\n";
+
+    cout << "\n[ Computer ]\n";
+    cout << " - Colpi totali sparati : " << c.getColpiSparati() << "\n";
+    cout << " - Colpi a segno        : " << c.getColpiASegno() << "\n";
+    cout << " - Accuratezza          : " << calcolaAccuratezza(c.getColpiSparati(), c.getColpiASegno()) << "%\n";
+
+    attendiInvio();
+}
+
+// ==========================================
+// LOOP DEL GIOCO PRINCIPALE
+// ==========================================
+void giocaPartita(Giocatore& umano, Giocatore& computer) {
+    umano.azzeraStatistiche();
+    computer.azzeraStatistiche();
+
     for (const auto& n : creaFlottaStandard()) {
         umano.getGriglia().aggiungiNave(n);
         computer.getGriglia().aggiungiNave(n);
     }
 
-    // Posizionamento navi
     umano.getGriglia().posizionaNaviCasualmente();
     computer.getGriglia().posizionaNaviCasualmente();
 
     bool partitaInCorso = true;
+    string messaggioEsitoGiocatore = "";
+    string messaggioEsitoComputer = "";
 
     while (partitaInCorso) {
         pulisciSchermo();
-        cout << COLORE_CIANO << "=== BATTAGLIA NAVALE ===" << COLORE_RESET << "\n\n";
+        mostraBanner();
 
-        cout << COLORE_GIALLO << "IL TUO CAMPO DI BATTAGLIA:" << COLORE_RESET << "\n";
+        cout << COLORE_GIALLO << "\nIL TUO CAMPO:" << COLORE_RESET << "\n";
         mostraGriglia(umano.getGriglia(), false);
 
         cout << "\n" << COLORE_GIALLO << "CAMPO NEMICO:" << COLORE_RESET << "\n";
         mostraGriglia(computer.getGriglia(), true);
 
-        // ------------------------------------------
-        // Turno Umano
-        // ------------------------------------------
+        if (!messaggioEsitoGiocatore.empty()) {
+            cout << "\n" << messaggioEsitoGiocatore << "\n";
+        }
+        if (!messaggioEsitoComputer.empty()) {
+            cout << messaggioEsitoComputer << "\n";
+        }
+
+        // --- Turno Giocatore ---
         Coordinata bersaglio;
         Nave* colpita = nullptr;
 
-        cout << "\nE' il tuo turno! ";
         while (!inputCoordinata(bersaglio)) {
-            cout << "Input non valido. Riprova: ";
+            cout << COLORE_ROSSO << "Coordinata non valida! Usare un formato come A5 o B2: " << COLORE_RESET;
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
         }
@@ -345,28 +397,31 @@ int main() {
         int esito = computer.getGriglia().attaccaCella(bersaglio, colpita);
 
         if (esito == -1) {
-            cout << "Hai già sparato qui! Perdi il turno.\n";
+            messaggioEsitoGiocatore = COLORE_BIANCO + "Hai gia' sparato qui! Turno sprecato." + COLORE_RESET;
             umano.registraColpo(false);
         } else if (esito == 0) {
-            cout << COLORE_BIANCO << "Mancato!" << COLORE_RESET << "\n";
+            messaggioEsitoGiocatore = COLORE_BIANCO + "> Tu: Acqua! Nessun bersaglio colpito." + COLORE_RESET;
             umano.registraColpo(false);
         } else if (esito == 1) {
-            cout << COLORE_ROSSO << "Colpito! " << colpita->getNome() << " danneggiata!" << COLORE_RESET << "\n";
+            messaggioEsitoGiocatore = COLORE_ROSSO + "> Tu: COLPITO! " + colpita->getNome() + " danneggiata!" + COLORE_RESET;
             umano.registraColpo(true);
         } else if (esito == 2) {
-            cout << COLORE_ROSSO << "Colpito e AFFONDATO! Hai distrutto la " << colpita->getNome() << "!" << COLORE_RESET << "\n";
+            messaggioEsitoGiocatore = COLORE_ROSSO + "> Tu: COLPITO E AFFONDATO! Hai distrutto la " + colpita->getNome() + "!" + COLORE_RESET;
             umano.registraColpo(true);
         }
 
         if (computer.getGriglia().tutteNaviAffondate()) {
-            cout << "\n" << COLORE_VERDE << "COMPLIMENTI! Hai vinto la partita!" << COLORE_RESET << "\n";
-            partitaInCorso = false;
+            pulisciSchermo();
+            mostraBanner();
+            cout << "\n" << COLORE_VERDE << "******************************************\n";
+            cout << "   COMPLIMENTI! HAI VINTO LA PARTITA!\n";
+            cout << "******************************************" << COLORE_RESET << "\n";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            attendiInvio();
             break;
         }
 
-        // ------------------------------------------
-        // Turno Computer
-        // ------------------------------------------
+        // --- Turno Computer ---
         Coordinata bersaglioComp;
         int esitoComp = -1;
 
@@ -376,26 +431,81 @@ int main() {
             esitoComp = umano.getGriglia().attaccaCella(bersaglioComp, colpita);
         }
 
-        cout << "\nIl nemico spara in " << (char)('A' + bersaglioComp.y) << bersaglioComp.x << "... ";
+        string coordCompStr = string(1, (char)('A' + bersaglioComp.y)) + to_string(bersaglioComp.x);
 
         if (esitoComp == 0) {
-            cout << "Mancato!\n";
+            messaggioEsitoComputer = COLORE_GRIGIO + "> Nemico (" + coordCompStr + "): Acqua!" + COLORE_RESET;
+            computer.registraColpo(false);
         } else if (esitoComp == 1) {
-            cout << "Ha COLPITO una tua nave!\n";
+            messaggioEsitoComputer = COLORE_ROSSO + "> Nemico (" + coordCompStr + "): Ha COLPITO una tua nave!" + COLORE_RESET;
+            computer.registraColpo(true);
         } else if (esitoComp == 2) {
-            cout << "Ha AFFONDATO una tua nave!\n";
+            messaggioEsitoComputer = COLORE_ROSSO + "> Nemico (" + coordCompStr + "): Ha AFFONDATO una tua nave!" + COLORE_RESET;
+            computer.registraColpo(true);
         }
 
         if (umano.getGriglia().tutteNaviAffondate()) {
-            cout << "\n" << COLORE_ROSSO << "IL NEMICO HA VINTO! La tua flotta è distrutta." << COLORE_RESET << "\n";
-            partitaInCorso = false;
+            pulisciSchermo();
+            mostraBanner();
+            cout << "\n" << COLORE_ROSSO << "******************************************\n";
+            cout << "   SCONFITTA! La tua flotta e' distrutta.\n";
+            cout << "******************************************" << COLORE_RESET << "\n";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            attendiInvio();
+            break;
         }
 
-        // Fine turno
-        cout << "\nPremi Invio per continuare il prossimo turno...";
-        cin.clear();
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cin.get();
+    }
+}
+
+// ==========================================
+// MAIN CON MENU INIZIALE
+// ==========================================
+int main() {
+    abilitaAnsi();
+    srand(time(0));
+
+    Giocatore umano("Giocatore");
+    Giocatore computer("Computer");
+    bool haGiocatoPartita = false;
+
+    while (true) {
+        pulisciSchermo();
+        mostraBanner();
+
+        cout << "\n" << COLORE_GIALLO << "=== MENU PRINCIPALE ===" << COLORE_RESET << "\n";
+        cout << " 1. Nuova Partita\n";
+        cout << " 2. Come Giocare (Regole)\n";
+        cout << " 3. Statistiche Ultima Partita\n";
+        cout << " 0. Esci dal gioco\n";
+        cout << "\nSeleziona un'opzione (0-3): ";
+
+        char scelta;
+        if (!(cin >> scelta)) break;
+
+        // Pulisce il buffer di input dopo aver letto 'scelta'
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        if (scelta == '1') {
+            giocaPartita(umano, computer);
+            haGiocatoPartita = true;
+        } else if (scelta == '2') {
+            mostraRegole();
+        } else if (scelta == '3') {
+            if (haGiocatoPartita) {
+                mostraStatistichePartita(umano, computer);
+            } else {
+                cout << COLORE_ROSSO << "\nNessuna partita giocata in questa sessione!\n" << COLORE_RESET;
+                attendiInvio();
+            }
+        } else if (scelta == '0') {
+            cout << "\nGrazie per aver giocato! Alla prossima.\n\n";
+            break;
+        } else {
+            cout << COLORE_ROSSO << "\nScelta non valida! Riprova.\n" << COLORE_RESET;
+            attendiInvio();
+        }
     }
 
     return 0;
